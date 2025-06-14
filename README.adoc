@@ -1,0 +1,37 @@
+I was spending too much time creating a Markup language for writing blogs. So here is the staging grounds before I finalize my blog setup.
+
+Go to https://github.com/yueleshia/blog/tree/main/final[here] to see the posts:
+
+
+
+
+== The language
+
+Because I value reproducible research footnotes were essential to me.
+
+The viable options were:
+
+* Markdown/CommonMark: Can be previewed everywhere and has countless implementations. However, footnotes are only an extension, i the ergnomics are not good.
+
+* AsciiDoctor: It is supported by GitHub, has almost all the features I want, except for script execution.
+It compiles slowly .
+
+
+* Juypter Notebooks: Has all the features I want that . Also I'd rather not use software written in python if I can help it.
+
+* RMarkdown: This aims to replace LaTeX with the ergonmics of Markdown. I would much rather use it for profession writing than LaTeX, but it is somewhat brittle as it incorporates too many technologies.
++
+I do like R for its array language{wj}footnote:[I think what discriminates an Array language is the ability for operators accept scalars, vectors, or tensors arbitrarily and do the correct thing.] features, but I like less than python.
+It is slow and is not really supported.
+
+* Typst: As a LaTeX replacement, it has everything, except that it is too alpha for blog writing.
+Currently https://github.com/typst/typst/issues/5512[HTML support is WIP].
+
+== Static-Site Generation
+
+I am still evaluating what I would want to do.
+
+* Hugo/Hexo/etc.: I want to use my own custom language, so to use something Hugo, I would have to create my own build pipeline, then use Hugo to parse that.
+* Astro
+* https://zine-ssg.io[Zine]
+* Roll my own: I originally started writing my own static site generator as attempt to show that it could be done with just a bash script in under 200 lines. And it was successful, but after some feature creep, I began focusing on just my own language. There is not much to innovate on the SSG side.

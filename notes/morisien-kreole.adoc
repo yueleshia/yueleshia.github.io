@@ -1,0 +1,49 @@
++++
+title  = 'Morisien Kreol'
+author = 'Yueleshia'
++++
+
+== Introduction
+
+I have put off learning Kreol seriously, but now I am learning seriously.
+So keep that in mind.
+
+A https://en.wikipedia.org/wiki/Creole_language[creole] is essentially a language resulting from children growing up on a contact language, turning the contact language into a stable native language.
+A contact language is in-between language that arises when multiple languages interact  with and influence each other.
+This is why many countries have a language called 'creole', but these are typically separate languages.
+I will be calling Mauritian Kreol as Kreol from here on out.
+
+== History
+
+@TODO: Trace migrations to Mauritius
+
+== Linguistics
+
+* I would describe most like french minus grammatical gender, with some vocabulary influence mostly from English and Tamil?
+* Mandarin, Hakka, Bhojpuri, Tamil, Hindi are languages I have heard in Mauritius (2025)
+* Many French articles (`le`, `la`, `du`) merged into their nouns, e.g. `diriz` (rice)
+* The first standard of Kreol was published in 2011: link:https://education.govmu.org/Documents/educationsector/Documents/Lortograf%20Kreol%20Morisien.pdf[Rapor Lortograf Kreol Repiblik Moris].{wj}footnote:[
+Government Information Service. link:https://gis.govmu.org/News/SitePages/Updated-edition-of-Report-on-spelling-and-grammatical-rules-of-Creole-Language-of-the-Republic-of-Mauritius-la.aspx[Updated edition of Report on spelling and grammatical rules of Creole Language of the Republic of Mauritius la]. Government of Mauritius, 2024-05-24.
+] recently standardised.
+So there is a standard spelling being taught in schools, but it is still quite free flowing as of 2025.
+A nice benefit of recent spelliing reforms is that spelling in Kreol makes a lot of sense as of 2025 before sound changes happen.
+* `ha` vs `sa`, derived from the French `ça` (demonstrative), are link:https://en.wikipedia.org/wiki/Free_variation:[free variants]
+
+== Grammar
+
+* No conjugation, just adverbial particles to mark tense/aspect
+* There is no copula (to be). For some of the more ambigious cases, `li` seems to be added as a kind of substitute. (@TODO: add example)
+* Wikipedia leads me to believe that there is latin-like tense.
+* `Mem` (same) is used for reflexive verbes, as well as ephamsis? One friend explained to me that it does a spacial transformation.
+* `la` (french there) used to add emphasis? Nominalizes? Perhaps some influence from the chinese `啦` particle (probably not)?
+* `pe` vs `in` progressive aspect?
+* `ki` means `what` and `that` (que)?
+
+
+== Slang
+
+* 
+
+== My Own Dictionary?
+
+*

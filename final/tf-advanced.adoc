@@ -1,0 +1,84 @@
+`$sh IS_LOCAL="${IS_LOCAL:-true}" ./_util.sh header "tf-advanced.adoc" '
+date = 2025-07-01
+tags = ["OpenTofu", "terragrunt"]
+' $`
+
+Random tips and tricks from the trenches.
+
+//* HEREDOC
+//* data external
+//* resource "terraform_data"
+
+== Naming Modules
+
+* For patterns{wj}footnote:[By 'pattern', I mean a logical set of components, e.g. a docker container + container registry entry + networking)] that you have extracted into a `module`, start with the name of the pattern.
++
+So instead of `aws_ecr_repository.example` -> `module.my_module.aws_ecr_repository.example`
++
+I would rather `aws_ecr_repository.example` -> `module.ecr_my_module.aws_ecr_repository.example`
++
+as this makes migrations easier when you see `module.ecr_my_module...`.
+
+
+== Making Terraform Validate More Useful
+
+* Make all your keys compile-time known.
+If that's not possible, make them only dependent on variables.
+A value is compile-time known if both it's keys and values 
++
+[source,hcl]
+----
+# So rather than this
+locals {
+  databases = {
+    notification-sms   = { memory = 512, }
+    notification-email = { memory = 512, }
+    data-cleaner       = { memory = 1024, }
+  },
+}
+
+
+----
+
+
+== Refactoring HCL
+
+Like all codebases, HCL code bases do benefit from refactoring as requirements change or you understand the problem space better.
+HCL codebases are slightly more intimidating to refactor as number of logs you have to read is quite large, and the chance to delete something in production.
+However, the CLI is designed with a confirmation before doing anything that mutates resources, so it's not that scary.
+
+An additional concern is that, importing and renaming resource takes significantly longer if you are working with remote state (0.2 seconds vs 20~60 seconds per resource depending on how many data sources you have).
+And maybe you made a mistake in your migration so you want to start afresh.
+These two reasons comeined is why you want to pull in your remote state, and work with it locally.
+
+So far the most satisfying workflow I have found for `tofu state mv` is the following script (AWS example):
+
+[source,bash]
+----
+backend() { printf %s\\n "backend \"${1}\" {}" >BACKEND.tf
+
+# put this to false, when you need make tweaks, and you have already pulled the state to your local.
+if true; then
+  backend "s3"; tofu init -reconfigure || exit "$?"
+  tofu state pull >terraform.tfstate
+  backend "local"; tofu init -reconfigure || exit "$?"
+fi
+
+for line in $(
+  echo 'local_file.one,local_file.two'
+  echo 'local_file.six,local_file.ten'
+); do
+  from="$( printf %s\\n "${1}" | cut -d , -f 1 )"
+  into="$( printf %s\\n "${1}" | cut -d , -f 2 )"
+
+  tofu state mv "${from}" "${into}"
+done
+
+# This will push the state back up to the remote
+backend "s3"; tofu init -reconfigure || exit "$?"
+----
+
+If you really need it, you can have life lines like `lifecycle { prevent_destroy = true }`, but I find this is not useful for the migration use case.
+
+Currently, my favourite workflow for running on local state is with the use of terragrunt `IS_LOCAL=true terragrunt init -reconfigure; IS_LOCAL=true terragrunt apply`, which saves you from editing the backend.tf file and git commiting it by accident.
+I leave its implementation as an exercise to the reader.

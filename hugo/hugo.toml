@@ -1,0 +1,31 @@
+title = "your title here"
+languageCode = "en-us"
+
+baseURL = ""
+contentdir = "content"
+layoutdir = "layouts"
+publishdir = "public"
+canonifyurls = true
+MetaDataFormat = "toml"
+
+[indexes]
+    category = "categories"
+    tag = "tags"
+
+[security]
+  [security.exec]
+    allow = ['^asciidoctor$', '^(dart-)?sass(-embedded)?$', '^go$', '^postcss$', '^tailwindcss$']
+
+[menu]
+  [[menu.main]]
+    name = "Home"
+    url = "/"
+    weight = 1
+  [[menu.main]]
+    name = "Blog"
+    url = "/blog/"
+    weight = 2
+  [[menu.main]]
+    name = "Notes"
+    url = "/notes/"
+    weight = 3

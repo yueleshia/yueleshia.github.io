@@ -1,0 +1,12 @@
+{{ define "page" }}
+<input type="hidden" value="index.html">
+<article class="container">
+  {{ if ne .Kind "home" }}
+    {{ range first 10 .Data.Pages }}
+      <h1>{{ .Title }}</h1>
+    {{ end }}
+  {{ else }}
+    {{ .Content }}
+  {{ end }}
+</article>
+{{ end }}
