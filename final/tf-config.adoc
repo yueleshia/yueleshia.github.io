@@ -1,0 +1,215 @@
+`$sh IS_LOCAL="${IS_LOCAL:-true}" ./_util.sh header "tf-config.adoc" '
+date = 2025-06-26
+tags = ["OpenTofu"]
+' $`
+
+The problem space of configuration has the following properties:
+
+* Necessarily manual but typically has a pattern, i.e. string templating.
+* Values change rarely, but when they change, you ideally want a single source of truth so that the change propagates.
+* Putting values of different phases side-by-side catches errors and self-documents (gives context).
+* You often want validation, e.g. ports should be numbers between 0 and 65535.
+
+Managing configuration at scale essential boils down to templating.
+For example:
+
+* On development you want to create `dev-12345/customer-db` and DNS record for `cdn.dev.myapp.cloud.net`
+* On production you want to create `prod-23456/customer-db` and DNS record for `cdn.prod.myapp.cloud.net`
+
+Your recipe is essentially `{account_id}/customer-db` and `cdn.{account_name}.myapp.cloud.net`.
+It sure would be nice to just have a config data JSON like so:
+
+[source,json]
+----
+{
+  "development": { "account_id": "dev-12345",  "account_name": "dev" },
+  "production":  { "account_id": "prod-23456", "account_name": "prod" },
+}
+----
+
+Here are some possible solutions:
+
+== Tfvars
+
+TF already proposes a solution out of the box: using link:https://opentofu.org/docs/language/values/variables/[tfvars].
+These are an HCL map, but without access to string templating and functions.
+Here is an example:
+
+[source,hcl]
+----
+# devlopment.tfvars
+account_id   = "dev-12345"
+account_name = "dev"
+
+# production.tfvars
+account_id   = "prod-23456"
+account_name = "prod"
+
+# global.tfvars
+db_name = "customer-db"
+
+
+# main.tf
+variable "account_id"   { type = string }
+variable "account_name" { type = string }
+variable "db_name"      { type = string }
+
+resource "terraform_data" "mycdn" { input = "cdn.${var.account_name}.cloud.net" }
+resource "terraform_data" "mydb"  { input = "${var.account_id}/${var.db_name}" }
+----
+
+You can specify multiple `tf apply -var-file global.tfvar -var-file development.tfvars`
+
+== Config in a JSON/local
+
+Oddly, this has better DX experience than using tfvars.
+Tfvars pass through the tfvars layer, which is run time only.
+On the otherhand, the `file("config.json")` function is evaluated at compile time.
+This means the following:
+
+[source,hcl]
+----
+#run: tofu apply -var resources='["first", "second"]'
+
+# tf validate cannot catch the following issue in the output, you have to wait until tf plan/apply
+variable "resources" { type = list(string) }
+
+resource "terraform_data" "example" { for_each = toset(var.resoures) }
+output "first" {
+  value = terraform_data.example["first-typo"]
+}
+
+
+
+# But tf validate can catch the following issue in the output (and can do the same for a jsondeocde(file("config.json"))
+locals {
+  resources = ["first", "second"]
+}
+resource "terraform_data" "example" { for_each = toset(local.resources) }
+output "first" {
+  value = terraform_data.example["first-typo"]
+}
+----
+
+However for storing config values, you will probably be dependent on a variable that specifics which release phase you are in.
+Going back to our example, here is using JSON:
+
+[source,hcl]
+----
+# main.tf
+variable "phase" { type = string }
+
+locals {
+  cfg = jsondecode(file("config.json"))[var.phase]
+}
+
+resource "terraform_data" "mycdn" { input = "cdn.${local.cfg.account_name}.cloud.net" }
+resource "terraform_data" "mydb"  { input = "${local.cfg.account_id}/${local.cfg.db_name}" }
+----
+
+== Using a Terraform module
+
+When your config starts self-referencing to derive new config values, you may want consider storing config into a Terraform module.
+However, you do not get access to functions, so you end up having to repeat a lot of code, making the source code less self-documenting.
+
+Here is an example:
+
+[source,hcl]
+----
+# folder/config.tf
+locals {
+  phases = {
+    development = { name = "dev",  id = "12345" }
+    production  = { name = "prod", id = "23456" }
+  }
+}
+
+output "out" {
+  value = {
+    for k, v in local.phases :
+    k => merge(v, { account_id = "${v.name}_${v.id}" })
+  }
+}
+
+# main.tf
+variable "phase" { type = string }
+
+data "terraform_remote_state" "config" {
+  backend = "local"
+
+  config = { path = "folder" }
+}
+
+locals { cfg = data.terraform_remote_state.config.outputs[var.phase] }
+
+resource "terraform_data" "mycdn" { input = "cdn.${local.cfg.name}.cloud.net" }
+resource "terraform_data" "mydb"  { input = "${local.cfg.account_id}/${var.db_name}" }
+----
+
+== Using alternative formats through 'external'
+
+TF allows arbitrary code execution with the data link:https://registry.terraform.io/providers/hashicorp/external/latest/docs/data-sources/external[external] block.
+The world is your oyster, but you have to confirm to a flat key-string map.
+Of course, your values could be serialized JSON.
+
+Here is an example using the configuration language link:https://github.com/tweag/nickel/blob/master/RATIONALE.md[nickel].
+
+[source,hcl]
+----
+# config.ncl
+{
+  development = { account_id = "%{account_name}-12345", account_name = "dev" },
+  production  = { account_id = "%{account_name}-23456", account_name = "prod" },
+} |> std.record.map_values (std.serialize 'Json)
+
+# main.tf
+variable "phase" { type = string }
+
+data "external" {
+  program = ["nickel", "export", "config.ncl"]
+}
+
+locals {
+  cfg = jsondecode(data.external.result[var.phase])
+}
+
+resource "terraform_data" "mycdn" { input = "cdn.${local.cfg.account_name}.cloud.net" }
+resource "terraform_data" "mydb"  { input = "${local.cfg.account_id}/${local.cfg.db_name}" }
+----
+
+
+== Generating JSON
+
+I think this is ideal developer experience.
+HCL works for provisioning, but is a poor configuration language, I would much manage configuration with something like Nickel.{wj}footnote:[They have a link:https://github.com/tweag/nickel/blob/master/RATIONALE.md[comparison of different configuration languages]. The reason I like Nickel because it is the fastest language (because of laziness) that has custom input validation (through link:https://nickel-lang.org/user-manual/contracts/[contracts]).]
+All the manual entry for your configuration is gets type-checked, and your HCL has access to values at compile time for better iteration speeds with `tofu validate`.
+
+The disadvantage is that you have now added an additional step to apply TF actions.
+However, this can be automated with TF wrappers like link:https://github.com/gruntwork-io/terragrunt[terragrunt].
+Here is an example:
+
+[source,chl]
+----
+# config.ncl
+{
+  development = { account_id = "%{account_name}-12345", account_name = "dev" },
+  production  = { account_id = "%{account_name}-23456", account_name = "prod" },
+} |> std.record.map_values (std.serialize 'Json)
+
+# terragrunt.hcl
+locals {
+  phase   = get_env("PHASE")
+  _unused = run_cmd("sh", "-c", "nickel export config.ncl --field '${local.phase}' >config.json")
+}
+
+# main.tf
+locals {
+  cfg = jsondecode(file("config.json"))[var.phase]
+}
+
+resource "terraform_data" "mycdn" { input = "cdn.${local.cfg.account_name}.cloud.net" }
+resource "terraform_data" "mydb"  { input = "${local.cfg.account_id}/${local.cfg.db_name}" }
+----
+
+Run this with `PHASE="development" terragrunt apply`{wj}footnote:[`PHASE="x" terragrunt` just means exporting the environment variable PHASE with the value 'x' scoped to a single command. This is POSIX shell syntax, and is present in bash as well.]
+Once you have created the config.json once, you can use `tofu validate` as often as you like.

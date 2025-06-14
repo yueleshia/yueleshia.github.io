@@ -1,0 +1,60 @@
+name: "Pages"
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+
+
+jobs:
+  pages:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write     # to deploy to Pages
+      id-token: write  # to verify the deployment originates from an appropriate source
+    steps:
+    - name: "Install nickel"
+      uses: yueleshia/binaries@main
+      with:
+        key: nickel-1.12.0
+        name: nickel
+        sha256: 511b06bc96e30c9cc7ec1fd5467e63477b274cc905f26824c54773ae76666eb4
+
+    - name: "Install tetra"
+      uses: yueleshia/binaries@main
+      with:
+        key: tetra
+        name: tetra
+        sha256: 7e3e5884120d3be1a6e25aed2ed680575f8f4f084aabe602a3239d726b4269df
+
+    - name: "Install hugo and asciidoctor"
+      run: |-
+        sudo apt update
+        sudo apt install -y asciidoctor hugo
+
+    - name: "Clone"
+      env:
+        repo: ${{ github.repository }}
+        token: ${{ github.token }}
+      run: |-
+        printf %s\\n "" "" "=== Cloning ${repo} ===" >&2
+        git init "repo"
+        git -C "repo" remote add origin "https://x-access-token:${token}@github.com/${repo}" || exit "$?"
+        git -C "repo" fetch origin "refs/heads/main" || exit "$?"
+        git -C "repo" switch --detach FETCH_HEAD || exit "$?"
+
+    - name: "Build"
+      run: |-
+        repo/make.sh "server" || exit "$?"
+        hugo --source "repo/hugo" --logLevel debug || exit "$?"
+
+    # Upload artifact that is named 1. github-pages 2. is zip of a single tar
+    - name: Upload static files as artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: "${{ github.workspace }}/repo/hugo/public"
+
+    - name: Deploy to GitHub Pages
+      uses: actions/deploy-pages@v4

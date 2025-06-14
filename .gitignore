@@ -1,0 +1,5 @@
+/draft
+/hugo/public
+/hugo/content/**/*.adoc
+
+.hugo_build.lock
