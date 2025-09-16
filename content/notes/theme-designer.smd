@@ -1,0 +1,176 @@
+---
+.title = "theme-designer",
+.date = @date("1990-01-01T00:00:00"),
+.author = "Yueleshia",
+.layout = "sites/theme-designer.shtml",
+.draft = false,
+.custom = {
+  "list": ["black", "red", "green", "yellow", "cyan", "blue", "magenta", "white"],
+}
+---
+
+```zig
+const APP_NAME = "tetra";
+const tree = cmdtree.command("", &.{
+    .{ "-h, --help!", cmdtree.option(bool, "Displays this help menu") },
+    .{ "run", cmdtree.command("Parses and executes", &.{
+        .{ "-o, --output! <ext>", cmdtree.option(?[]const u8, "Redirects output to a file") },
+        .{ "-f, --format! <ext>", cmdtree.option(?OutputType, "json, text") },
+        .{ "file", cmdtree.command("Parses and executes a file", &.{}) },
+        .{ "stdin", cmdtree.command("Parses and executes stdin", &.{}) },
+    }) },
+    .{ "parse", cmdtree.command("Parses", &.{
+        .{ "-o, --output! <ext>", cmdtree.option(?[]const u8, "Redirects output to a file") },
+        .{ "stdin", cmdtree.command("Parses stdin", &.{}) },
+        .{ "file", cmdtree.command("Parses stdin", &.{}) },
+    }) },
+    .{ "version", cmdtree.command("Displays the version of this program", &.{}) },
+});
+
+const OutputType = enum(u32) {
+    json,
+    text,
+};
+
+const app = cmdtree.app_cmdtree_init(tree);
+var state = tree.Type{
+    .@"--help" = false,
+    .run = .{
+        .@"--output" = null,
+        .@"--format" = null,
+        .file = .{},
+        .stdin = .{},
+    },
+    .parse = .{
+        .@"--output" = null,
+        .stdin = .{},
+        .file = .{},
+    },
+    .version = .{},
+};
+
+var stderr_buffer: [1024]u8 = undefined;
+
+pub fn main() !void {
+    const args = try std.process.argsAlloc(std.heap.page_allocator);
+    var positionals = try std.ArrayList([]const u8).initCapacity(std.heap.page_allocator, args.len);
+    var iter = app.iter_init(&state);
+
+    var stderr_writer = std.fs.File.stderr().writer(&stderr_buffer);
+
+    for (args[1..]) |arg| {
+        //std.debug.print("Processing {s}\n", .{arg});
+        const is_positional = iter.next(arg) catch |err| switch (err) {
+            error.CmdTreeInvalidEnumVariant => {
+                std.process.fatal("{}", .{err});
+            },
+            error.CmdTreeUnexpectedCommand => {
+                const closest = iter.find_closest_pathstr(arg);
+
+                std.debug.print("Invalid subcommand: '{s}'\n", .{arg});
+                std.debug.print("Did you mean:\n  {s}{s} '{s}'\n", .{APP_NAME, iter.pathstr.items, closest});
+                std.process.exit(1);
+            },
+            error.CmdTreeUnexpectedOption => {
+                const closest = iter.find_closest_pathstr(arg);
+
+                std.debug.print("Invalid option: '{s}'\n", .{arg});
+                std.debug.print("Did you mean:\n  {s}{s} '{s}'\n", .{APP_NAME, iter.pathstr.items, closest});
+                std.process.exit(1);
+            }
+
+            //// If you want to process `-` for stdin instead you can do it here.
+            //// Here we fail on invalid option is informative to the user.
+            //error.CmdTreeDashArgument => {
+            //    std.debug.print("{s}{s}\n", .{ iter.err.option_name, iter.err.message });
+            //    const stderr = std.fs.File.stderr();
+            //    try iter.print_help(stderr, APP_NAME);
+            //    std.process.exit(1);
+            //},
+        };
+        if (is_positional == .positional) positionals.appendAssumeCapacity(arg);
+    }
+    //cmdtree.debug_print_state(&state);
+
+    if (false) for (positionals.items) |p| {
+        std.debug.print("Arg: {s}\n", .{p});
+    };
+
+    const path = app.iter_done(&iter) catch |err| switch (err) {
+        error.CmdTreeExpectingMoreArgs => {
+            std.debug.print("Not enough args.\n", .{});
+            try app.print_help(&stderr_writer.interface, APP_NAME, iter.pathstr.items);
+            std.process.exit(1);
+        },
+    };
+    if (state.@"--help") {
+        try app.print_help(&stderr_writer.interface, APP_NAME, iter.pathstr.items);
+        std.process.cleanExit();
+    }
+
+    switch (path.main) {
+        .run, .parse => {
+            const is_stdin = switch (path.main) {
+                .parse => |x| switch (x) {
+                    .stdin => true,
+                    .file => false,
+                },
+                .run => |x| switch (x) {
+                    .stdin => true,
+                    .file => false,
+                },
+                else => unreachable,
+            };
+
+            const input = if (is_stdin) {
+                @panic("@TODO: stdin not yet support");
+            } else blk: {
+                const input_path = switch (positionals.items.len) {
+                    0 => std.process.fatal("Expected a file path as input.\nUSAGE: {s}{s} <path>", .{ APP_NAME, iter.pathstr.items }),
+                    1 => positionals.items[0],
+                    else => std.process.fatal("Too many files specified.\nUSAGE: {s}{s} <path>", .{ APP_NAME, iter.pathstr.items }),
+                };
+                break :blk std.fs.cwd().readFileAlloc(std.heap.page_allocator, input_path, std.math.maxInt(u32)) catch |err| switch (err) {
+                    else => |e| std.debug.panic("{}", .{e}),
+                };
+            };
+
+            var buffer: [4096]u8 = undefined;
+            const fh = if (state.parse.@"--output") |p| blk: {
+                break :blk std.fs.cwd().openFile(p, .{}) catch |err| return err;
+            } else std.fs.File.stdout();
+            defer if (state.parse.@"--output") |_| fh.close();
+
+            var writer = fh.writer(&buffer);
+            switch (path.main) {
+                .parse => {
+                    const blocks = try tetra.parse(std.heap.page_allocator, input);
+                    try Output.stringify(&writer.interface, input, blocks.items);
+                },
+                .run => {
+                    const io = tetra.Io.event_loop();
+                    const out_ty = state.run.@"--format" orelse .text;
+                    const blocks = try my_run(io, std.heap.page_allocator, input);
+
+                    switch (out_ty) {
+                        .json => {
+                            try Output.stringify(&writer.interface, input, blocks.items);
+                        },
+                        .text => {
+                            //try Output.stringify(&writer.interface, input, blocks.items);
+                            for (blocks.items) |b| {
+                                switch (b.ty) {
+                                    .note, .text, .atom => {},
+                                    .pipe => try fh.writeAll(b.output.items),
+                                }
+                            }
+                        },
+                    }
+                },
+                else => unreachable,
+            }
+        },
+        .version => std.debug.print("v1\n", .{}),
+    }
+}
+```

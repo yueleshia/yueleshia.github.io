@@ -1,0 +1,82 @@
+<extend template="base.shtml">
+
+<head id="head">
+  <style>
+    .container {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto 1fr auto;
+      gap: 30px;
+    }
+    .box {
+      display: inline-block;
+      width: 1em;
+      height: 100%;
+    }
+    input {
+      font-family: 'Courier New', Courier, monospace;
+      width: 6em;
+    }
+    /* Default colors */
+    .black   { background-color: #000000; } .black-light   { background-color: #555555; }
+    .red     { background-color: #FF0000; } .red-light     { background-color: #AA0000; }
+    .green   { background-color: #00FF00; } .green-light   { background-color: #00AA00; }
+    .yellow  { background-color: #FFFF00; } .yellow-light  { background-color: #AAAA00; }
+    .cyan    { background-color: #00FFFF; } .cyan-light    { background-color: #00AAAA; }
+    .blue    { background-color: #0000FF; } .blue-light    { background-color: #0000AA; }
+    .magenta { background-color: #FF00FF; } .magenta-light { background-color: #AA00AA; }
+    .white   { background-color: #FFFFFF; } .white-light   { background-color: #AAAAAA; }
+  </style>
+  <script>
+    function change(id) {
+      var preview = document.querySelector(`[data-color="${id}"]`);
+      var color = document.getElementById(id).value;
+      if (color.length == 7) {
+        preview.style.backgroundColor = color;
+      }
+    }
+  </script>
+</head>
+
+<main id="main">
+  <div :loop="$page.custom.get('list')" class="container">
+
+    <div class="$loop.it.suffix('', ' box')" data-color="$loop.it"></div>
+    <div><input
+      id="$loop.it" type="text"
+      onchange   = "change(this.id);"
+      onkeypress = "this.onchange(this.id);"
+      onpaste    = "this.onchange(this.id);"
+      oninput    = "this.onchange(this.id);"
+    ></div>
+    <div :text="$loop.it"></div>
+    <div class="$loop.it.suffix('-light', ' box')" data-color="$loop.it.suffix('-light')"></div>
+    <div><input
+      id="$loop.it.suffix('-light')" type="text"
+      onchange   = "change(this.id);"
+      onkeypress = "this.onchange(this.id);"
+      onpaste    = "this.onchange(this.id);"
+      oninput    = "this.onchange(this.id);"
+    ></div>
+    <div :text="$loop.it.suffix(' light')"></div>
+  </div>
+
+  <script>
+    document.querySelectorAll(".box").forEach(function (x) {
+      var rgb = getComputedStyle(x).backgroundColor;
+      var inner = rgb.substr(4, rgb.length - 4 - 1).split(", ");
+
+      var s = "#";
+      for (var i = 0; i < inner.length; i += 1) {
+        var d = parseInt(inner[i]).toString(16);
+        if (d.length < 2) s += "0";
+        s += d;
+      }
+      document.getElementById(x.dataset.color).value = s;
+    })
+  </script>
+  <hr>
+  <ctx :html="$page.content()"></ctx>
+</main>
+
+<footer id="footer">
+</footer>

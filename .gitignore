@@ -1,5 +1,6 @@
 /draft
 /hugo/public
 /hugo/content/blog/*.adoc
-
 .hugo_build.lock
+
+/assets/cache.ziggy

@@ -1,0 +1,102 @@
+<extend template="base.shtml">
+<head id="head">
+  <style>
+    #prev-next {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      margin-top: 40px;
+    }
+
+    figure {
+      align-self: center;
+      text-align: center;
+      font-style: italic;
+    }
+
+    :root {
+      --nav-page-size: 1rem
+    }
+
+    .below-nav {
+      padding-top: 1.2rem;
+    }
+
+    #nav-post {
+      position: sticky;
+      top: 0;
+      background-color: var(--white);
+    }
+    #nav-post-middle {
+      font-size: var(--nav-page-size);
+
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-auto-flow: column;
+      gap: 10px;
+    }
+    #nav-post-middle span { margin: auto; }
+  </style>
+</head>
+
+<main id="main">
+  <nav id="nav-post" class="col-full layout-three-col" style="border-bottom: solid var(--black) 1px;">
+    <div style="grid-area: left;"></div>
+    <div id="nav-post-middle" style="grid-area: middle;">
+      <span><ctx :if="$page.prevPage?()"><a href="$if.link()">&lt;</a></ctx></span>
+      <span>↑<a href="#top">Top</a></span>
+      <span><a href="#post">Content</a></span>
+      <span>↓<a href="#prev-next">Bot</a></span>
+      <span><ctx :if="$page.nextPage?()"><a href="$if.link()">&gt;</a></ctx></span>
+    </div>
+    <div style="grid-area: right;"></div>
+  </nav>
+
+  <section class="col-full layout-three-col" style="border-top: 1px">
+    <div :if="$site.asset('cache.ziggy').ziggy().get('backlinks').has($page.custom.get('id'))">
+      <h5>Backlinks</h5>
+      <section style="grid-area: left;" :loop="$site.asset('cache.ziggy').ziggy().get('backlinks').get($page.custom.get('id'))">
+        <p><a href="$site.page($loop.it.prefix('blog/')).link()" :text="$site.page($loop.it.prefix('blog/')).title"></a></p>
+      </section>
+    </div>
+
+    <section style="grid-area: right;">
+      <p>en</p>
+      <ctx :loop="$page.tags">
+        <p><a :text="$loop.it" href=""></a></p>
+      </ctx>
+    </section>
+
+    <section style="grid-area: middle;">
+      <h1 :text="$page.title"></h1>
+      <div :html="$page.toc()"></div>
+    </section>
+  </section>
+
+  <section id="post" class="below-nav"></section>
+  <ctx :html="$page.content()"></ctx>
+
+  <div id="prev-next" class="below-nav">
+    <div :if="$page.prevPage?()">
+      <a href="$if.link()">← <ctx :text="$if.title"></ctx></a>
+    </div>
+    <div :if="$page.nextPage?()">
+      <a href="$if.link()"><ctx :text="$if.title"></ctx> →</a>
+    </div>
+  </div>
+  <section :if="$page.footnotes?()">
+    <style>.footnote p { display: inline; }</style>
+    <h1 id="references">References</h1>
+    <ol :loop="$if">
+      <li class="footnote" id="$loop.it.def_id">
+        <ctx :html="$loop.it.html()"></ctx>
+        <ctx :loop="$loop.it.ref_ids">
+          <a href="$loop.it.prefix('#')" :html="$loop.idx"></a>
+        </ctx>
+      </li>
+    </ol>
+  </section>
+</main>
+
+<footer id="footer">
+</footer>
