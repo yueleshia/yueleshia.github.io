@@ -1,0 +1,14 @@
+---
+.title = "Devlog Archive",
+.date = @date("1990-01-01T00:00:00"),
+.author = "Sample Author",
+.layout = "devlog-archive.shtml",
+.alternatives = [{ 
+    .name = "rss",
+    .layout = "devlog.xml", 
+    .output = "index.xml",
+}],
+.draft = false,
+--- 
+
+The latest devlog year is also available [via RSS feed]($link.alternative('rss')).

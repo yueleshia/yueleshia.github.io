@@ -1,0 +1,19 @@
+<extend template="base.shtml">
+<head id="head"></head>
+
+<main id="main">
+  <h1 :text="$page.title"></h1>
+  <div :html="$page.content()"></div>
+
+  <ctx :loop="$site.page('blog').subpages()">
+    <div>
+      <li>
+        <span class="post-byline" style="margin-bottom: 1rem;" :text="$loop.it.date.format('2006-01-02')"></span>
+        <a href="$loop.it.link()" class="post-link" :text="$loop.it.title"></a>
+      </li>
+    </div>
+  </ctx>
+</main>
+
+<footer id="footer">
+</footer>

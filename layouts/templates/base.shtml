@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+  <head id="head">
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1">
+    <title :text="$site.title"></title>
+    <super>
+
+    <style>
+      @view-transition { navigation: auto; }
+
+      /* Layout */
+      .layout-breakout {
+        width:   100%;
+        margin:  0px;
+        padding: 0px;
+      }
+      @media screen and (min-width: 768px) {
+        :root { --mid: 700px; }
+
+        .layout-breakout {
+          display: grid;
+          grid-template-columns: 1fr;
+          grid-template-columns:
+            [col-full-start] minmax(10px, 1fr) [col-mid-start] var(--mid) [col-mid-end] minmax(10px, 1fr) [col-full-end]
+          ;
+        }
+        .layout-breakout > * {
+          grid-column: col-mid;
+        }
+        .layout-three-col {
+          display:               grid;
+          grid-template-columns: 1fr var(--mid) 1fr;
+          grid-template-areas:   "left middle right";
+        }
+      }
+      .col-full { grid-column: col-full; }
+      .col-mid   { grid-column: col-mid; }
+
+      header {
+        display: flex;
+        flex-direction: row;
+        justify-content: left;
+        font-size: 1.2em;
+        margin-bottom: 20px;
+      }
+
+      footer {
+        margin-top: 30px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      footer hr { width: 100%; }
+
+      #theme {
+        border: var(--black) solid 1px;
+        display: flex;
+        float:  right;
+      }
+      #theme input[type="radio"] { display: none; }
+      #theme label { padding: 0em 0.5em; cursor: pointer; transition: background-color 0.3s; }
+      #theme label                 { background-color: var(--black-light); }
+      #theme input:checked + label { background-color: var(--white-light); }
+    </style>
+  </head>
+  <body>
+    <header id="top" class="layout-breakout">
+      <nav>
+        <div id="theme" :loop="$site.asset('data.ziggy').ziggy().get('themes')">
+          <ctx :if='$loop.idx.eq(1)'><input       type="radio" id="$loop.it" name="theme" value="light" onclick="persist_theme(this.id)" checked></ctx>
+          <ctx :if='$loop.idx.eq(1).not()'><input type="radio" id="$loop.it" name="theme" value="light" onclick="persist_theme(this.id)"></ctx>
+          <label for="$loop.it" :text="$loop.it"></label>
+        </div>
+        <div style="text-align: center;">
+          <ctx :if="$site.page('').isCurrent()">Home</ctx>
+          <a :if="$site.page('').isCurrent().not()" href="$site.page('').link()">Home</a>
+
+          &nbsp;
+          <a href="/admin">Dashboard</a>
+          &nbsp;
+          <ctx :if="$site.page('notes').isCurrent()">Notes</ctx>
+          <a :if="$site.page('notes').isCurrent().not()" href="$site.page('notes').link()">Notes</a>
+
+          <ctx :if="$site.page('devlog').subpages().first?()">
+            &nbsp;
+            <ctx :if="$if.isCurrent()">Devlog</ctx>
+            <a :if="$if.isCurrent().not()" href="$if.link()">Devlog</a>
+          </ctx>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main" class="layout-breakout">
+      <super>
+    </main>
+
+    <footer id="footer" class="layout-breakout">
+       <super>
+    </footer>
+
+    <!-- No reason put styles in external asset if we are under 14KB with gzip (single HTTP packet) -->
+    <style>
+      :root {
+        --code-padding-x: 5px;
+        --code-padding-y: 10px;
+      }
+
+      /* https://github.com/helix-editor/helix/blob/master/runtime/themes/onelight.toml */
+      :root {
+        --red:           #d50000;
+        --red-light:     #c2185b;
+        --yellow:        #ff6f00;
+        --yellow-light:  #d35400;
+        --green:         #24a443;
+        --green-light:   #24a443;
+        --cyan:          #0086c1;
+        --cyan-light:    #0086c1;
+        --blue:          #0061ff;
+        --light-blue:    #0091ea;
+        --magenta:       #b500a9;
+        --magenta-light: #651fff;
+
+        --black:        #282c34;
+        --black-light:  #5c6370;
+        --white:        #fafafa;
+        --white-light:  #e0e0e0;
+      }
+
+      /* https://github.com/helix-editor/helix/blob/master/runtime/themes/tokyonight.toml */
+      :root :has(#dark:checked) {
+        --red:           #f7768e;
+        --red-light:     #ff9e64;
+        --yellow:        #e0af68;
+        --green:         #73daca;
+        --light-green:   #9ece6a;
+        --cyan:          #7dcfff;
+        --cyan-light:    #2ac3de;
+        --blue:          #7aa2f7;
+        --blue-light:    #1abc9c;
+        --magenta:       #9d7cd8;
+        --magenta-light: #bb9af7;
+
+        --black:         #c0caf5;
+        --black-light:   #a9b1d6;
+        --white:         #1a1b26;
+        --white-light:   #292e42;
+      }
+
+      body {
+        color: var(--black);
+        background-color: var(--white);
+        /*transition: 0.4s;*/
+        font-family: Liberation, Georgia, serif;
+        font-size: 1em;
+        line-height: 1.4;
+      }
+
+      h1, h2, h3, h4, h5 {
+        color: var(--black);
+        font-family: Fira, Helvetica, sans-serif;
+      }
+
+      b, strong { color: var(--white-light); }
+      a { color: var(--blue); }
+
+      pre {
+        white-space:      pre-wrap;
+        border-top:       1px solid var(--black);
+        border-bottom:    1px solid var(--black);
+        background-color: var(--white-light);
+        padding:          var(--code-padding-y) var(--code-padding-x);
+      }
+
+      /* Display language on top right */
+      pre code:before {
+        content:  attr(class);
+        display:  block;
+        position: relative;
+        top:      calc(-1 * var(--code-padding-y));
+        right:    calc(-1 * var(--code-padding-x));
+        float:    right;
+
+        background-color: var(--cyan);
+        padding:  5px 10px;
+      }
+
+      code .comment               { color: var(--black-light); font-style: italic; }
+      code .comment_documentation { color: var(--black-light); font-style: italic; }
+      code .constant_builtin      { color: var(--magenta-light); }
+      code .function              { color: var(--blue); }
+      code .function_call         { color: var(--black); }
+      code .function_builtin      { color: var(--cyan); }
+      code .keyword               { color: var(--magenta); }
+      code .keyword_conditional   { color: var(--red); font-weight: bold; }
+      code .keyword_exception     { color: var(--magenta); }
+      code .keyword_function      { color: var(--magenta); }
+      code .keyword_import        { color: var(--red); }
+      code .keyword_modifier      { color: var(--magenta); font-weight: bold; }
+      code .keyword_operator      { color: var(--red); }
+      code .keyword_repeat        { color: var(--red-light); font-weight: bold; }
+      code .keyword_return        { color: var(--magenta-light); font-weight: bold; }
+      code .keyword_type          { color: var(--magenta); }
+      code .label                 { color: var(--cyan); }
+      code .module                { color: var(--blue); }
+      code .operator              { color: var(--red); }
+      code .punctuation           { color: var(--black); }
+      code .punctuation_delimiter { color: var(--magenta); }
+      code .string                { color: var(--green); }
+      code .string_escape         { color: var(--red-light); }
+      code .type                  { color: var(--gold); }
+      code .type_builtin          { color: var(--yellow); }
+      code .variable              { color: var(--black); }
+      code .variable_builtin      { color: var(--light-blue); }
+      code .variable_member       { color: var(--black); }
+
+    </style>
+    <script>
+      // I don't think there is a way to persist theme selection across pages
+      function persist_theme(theme) {
+        var address = new URL(window.location.href);
+        address.searchParams.set("theme", theme);
+        window.history.pushState({}, "", address);
+
+        var links = document.querySelectorAll("a");
+
+        for (var i = 0; i < links.length; ++i) {
+          var url = new URL(links[i].href);
+          if (url.host == window.location.host) {
+            url.searchParams.set("theme", theme);
+            links[i].href = url.toString();
+          }
+        }
+      }
+
+      // I don't think there is a non-JS way to do this
+      (function () {
+        var current_theme = new URLSearchParams(window.location.search).get("theme");
+        var themes = ["light", "dark", "green"];
+        for (var i = 0; i < themes.length; ++i) {
+          var theme = themes[i];
+          if (current_theme == theme) {
+            document.getElementById(theme).checked = true;
+            persist_theme(theme);
+            return; // skip querying system-preferred theme
+          }
+        }
+
+        if (window.matchMedia) {
+          for (var i = 0; i < themes.length; ++i) {
+            var theme = themes[i];
+            if (window.matchMedia(`(prefers-color-scheme: ${theme})`).matches) {
+              document.getElementById(theme).checked = true;
+              persist_theme(theme);
+              return;
+            }
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>

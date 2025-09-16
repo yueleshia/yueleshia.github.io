@@ -1,0 +1,23 @@
+---
+.title = "Devlog - 1990",
+.date = @date("1990-01-01T00:00:00"),
+.author = "Sample Author",
+.layout = "devlog.shtml",
+.draft = false,
+---
+[]($section.id('about'))
+## About this Devlog
+
+You can [subscribe to this page via RSS]($link.page('devlog').alternative('rss')).
+
+TODO
+
+## [Third Entry]($section.id("1990-01-03T00:00:00"))
+This is the third entry.
+
+## [Second Entry]($section.id("1990-01-02T00:00:00"))
+This is the second entry.
+
+## [Hello Zine]($section.id("1990-01-01T00:00:00"))
+This is the first entry in this year's devlog created with
+[Zine](https://zine-ssg.io)!

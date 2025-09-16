@@ -5,8 +5,6 @@ on:
     branches:
       - main
 
-
-
 jobs:
   pages:
     name: Build
@@ -26,13 +24,19 @@ jobs:
       uses: yueleshia/binaries@main
       with:
         key: tetra
-        name: tetra
-        sha256: 7e3e5884120d3be1a6e25aed2ed680575f8f4f084aabe602a3239d726b4269df
+        sha256: db67563922bb0d7ed2e438cd5ddb72c207625fb375a1dc91c058275af1a62ef4
 
-    - name: "Install hugo and asciidoctor"
-      run: |-
-        sudo apt update
-        sudo apt install -y asciidoctor hugo
+    - name: "Install Zine"
+      uses: yueleshia/binaries@main
+      with:
+        key: zine-x86_64-linux-musl-0.11.1.tar.xz
+        sha256: 2afe72a8dbeb19627c269ef980faee933c7ba134b6c8d9291fa758504fbf635a
+
+    - name: "Install Lychee"
+      uses: yueleshia/binaries@main
+      with:
+        key: lychee-0.20.1.tar.gz
+        sha256: ceeb8620a88ec4779878e061d59d5feb5b3714a9ba58321bdf245b699854ed3a
 
     - name: "Clone"
       env:
@@ -42,19 +46,20 @@ jobs:
         printf %s\\n "" "" "=== Cloning ${repo} ===" >&2
         git init "repo"
         git -C "repo" remote add origin "https://x-access-token:${token}@github.com/${repo}" || exit "$?"
-        git -C "repo" fetch origin "refs/heads/main" || exit "$?"
+        git -C "repo" fetch origin "refs/heads/main" --depth 1 || exit "$?"
         git -C "repo" switch --detach FETCH_HEAD || exit "$?"
 
     - name: "Build"
       run: |-
-        repo/make.sh "server" || exit "$?"
-        hugo --source "repo/hugo" --logLevel debug || exit "$?"
+        cd repo || exit "$?"
+        go run make.go cache build
+        zine release --output public
 
     # Upload artifact that is named 1. github-pages 2. is zip of a single tar
     - name: Upload static files as artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: "${{ github.workspace }}/repo/hugo/public"
+        path: "${{ github.workspace }}/repo/public"
 
     - name: Deploy to GitHub Pages
       uses: actions/deploy-pages@v4

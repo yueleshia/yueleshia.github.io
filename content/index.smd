@@ -1,0 +1,11 @@
+---
+.title = "",
+.date = @date("1990-01-01T00:00:00"),
+.author = "Yueleshia",
+.layout = "sites/home.shtml",
+.draft = false,
+---
+
+I care about programming craftsmanship and linguistics.
+This site is still very much a work in progress.
+I am migrating to a new tech stack, so the design is fairly off.
